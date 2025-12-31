@@ -24,14 +24,26 @@ class Car:
     Represents a car with realistic physics including:
     - Position and orientation
     - Velocity and acceleration
-    - Steering mechanics
+    - Smooth steering mechanics (angular velocity)
     - Collision detection via corner points
+    - Pure self-learning mode (NO intelligent assists)
     """
 
-    # Action constants
-    TURN_LEFT = 0
-    STRAIGHT = 1
-    TURN_RIGHT = 2
+    # Action constants (9 discrete actions = 3 steering × 3 speed)
+    LEFT_SLOW = 0
+    LEFT_NORMAL = 1
+    LEFT_FAST = 2
+    STRAIGHT_SLOW = 3
+    STRAIGHT_NORMAL = 4
+    STRAIGHT_FAST = 5
+    RIGHT_SLOW = 6
+    RIGHT_NORMAL = 7
+    RIGHT_FAST = 8
+
+    # Speed multipliers for SLOW/NORMAL/FAST
+    SPEED_SLOW = 0.3      # 30% of max velocity
+    SPEED_NORMAL = 0.6    # 60% of max velocity
+    SPEED_FAST = 1.0      # 100% of max velocity
 
     def __init__(
         self,
@@ -45,6 +57,7 @@ class Car:
         acceleration: float = 0.5,
         friction: float = 0.98,
         turn_rate: float = 0.1,
+        angular_damping: float = 0.85,
     ):
         """
         Initialize a car.
@@ -59,12 +72,14 @@ class Car:
             min_velocity: Maximum reverse speed (negative value)
             acceleration: Acceleration rate per frame
             friction: Velocity decay factor (< 1.0)
-            turn_rate: Steering angle change per frame in radians
+            turn_rate: Steering angular velocity per frame in radians
+            angular_damping: Damping factor for smooth steering (0.0=instant, 1.0=no damping)
         """
         # Position and orientation
         self.x = x
         self.y = y
         self.angle = angle  # Radians
+        self.angular_velocity = 0.0  # Current turning speed
 
         # Dimensions
         self.width = width
@@ -79,6 +94,7 @@ class Car:
         self.max_velocity = max_velocity
         self.min_velocity = min_velocity
         self.turn_rate = turn_rate
+        self.angular_damping = angular_damping
 
         # Track if car is alive
         self.alive = True
@@ -93,25 +109,60 @@ class Car:
 
     def update(self, action: int) -> None:
         """
-        Update car state based on action.
+        Update car state based on 9 discrete actions (3 steering × 3 speed).
+        Pure self-learning mode - NO intelligent assists!
+        Features smooth steering using angular velocity.
 
         Args:
-            action: 0=TURN_LEFT, 1=STRAIGHT, 2=TURN_RIGHT
+            action: 0-8 representing [LEFT/STRAIGHT/RIGHT] × [SLOW/NORMAL/FAST]
+                0: LEFT_SLOW, 1: LEFT_NORMAL, 2: LEFT_FAST
+                3: STRAIGHT_SLOW, 4: STRAIGHT_NORMAL, 5: STRAIGHT_FAST
+                6: RIGHT_SLOW, 7: RIGHT_NORMAL, 8: RIGHT_FAST
         """
         if not self.alive:
             return
 
-        # Always accelerate forward
-        self.velocity += self.acceleration_rate
+        # Decode action into steering and speed
+        # action // 3 gives steering: 0=LEFT, 1=STRAIGHT, 2=RIGHT
+        # action % 3 gives speed: 0=SLOW, 1=NORMAL, 2=FAST
+        steering = action // 3
+        speed_level = action % 3
 
-        # Apply steering
-        if action == self.TURN_LEFT:
-            self.angle -= self.turn_rate
-        elif action == self.TURN_RIGHT:
-            self.angle += self.turn_rate
-        # STRAIGHT: no angle change
+        # Map speed level to target speed multiplier
+        if speed_level == 0:  # SLOW
+            speed_multiplier = self.SPEED_SLOW
+        elif speed_level == 1:  # NORMAL
+            speed_multiplier = self.SPEED_NORMAL
+        else:  # FAST
+            speed_multiplier = self.SPEED_FAST
 
-        # Clamp velocity
+        # Calculate target speed
+        target_speed = self.max_velocity * speed_multiplier
+
+        # Smooth acceleration/deceleration toward target speed
+        speed_diff = target_speed - self.velocity
+        if abs(speed_diff) > 0.1:
+            # Accelerate or brake
+            self.velocity += speed_diff * 0.1  # Smooth transition
+        else:
+            self.velocity = target_speed
+
+        # Smooth steering using angular velocity
+        # Map steering to target angular velocity
+        if steering == 0:  # LEFT
+            target_angular_velocity = -self.turn_rate
+        elif steering == 2:  # RIGHT
+            target_angular_velocity = self.turn_rate
+        else:  # STRAIGHT
+            target_angular_velocity = 0.0
+
+        # Apply damping to angular velocity (smooth steering)
+        self.angular_velocity += (target_angular_velocity - self.angular_velocity) * (1.0 - self.angular_damping)
+
+        # Update angle with angular velocity
+        self.angle += self.angular_velocity
+
+        # Clamp velocity to limits
         self.velocity = max(self.min_velocity, min(self.max_velocity, self.velocity))
 
         # Apply friction
