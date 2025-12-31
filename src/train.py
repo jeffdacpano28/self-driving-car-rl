@@ -1,0 +1,273 @@
+"""
+Training script for DQN agent.
+"""
+
+import sys
+import argparse
+from pathlib import Path
+import yaml
+import torch
+from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
+import numpy as np
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from environment.simulation import CarEnvironment
+from algorithms.dqn.agent import DQNAgent
+
+
+def load_config(config_path: str) -> dict:
+    """Load configuration from YAML file."""
+    with open(config_path, 'r') as f:
+        return yaml.safe_load(f)
+
+
+def train(
+    env: CarEnvironment,
+    agent: DQNAgent,
+    num_episodes: int,
+    writer: SummaryWriter,
+    save_freq: int = 50,
+    eval_freq: int = 50,
+    checkpoint_dir: str = "models/checkpoints/dqn",
+):
+    """
+    Train DQN agent.
+
+    Args:
+        env: Training environment
+        agent: DQN agent
+        num_episodes: Number of training episodes
+        writer: TensorBoard writer
+        save_freq: Save checkpoint every N episodes
+        eval_freq: Evaluate agent every N episodes
+        checkpoint_dir: Directory to save checkpoints
+    """
+    best_reward = -float('inf')
+    episode_rewards = []
+    episode_lengths = []
+
+    print("\n" + "=" * 60)
+    print("🚀 STARTING TRAINING")
+    print("=" * 60)
+    print(f"Episodes: {num_episodes}")
+    print(f"Device: {agent.device}")
+    print(f"Epsilon: {agent.epsilon:.3f} → {agent.epsilon_end}")
+    print("=" * 60 + "\n")
+
+    for episode in tqdm(range(num_episodes), desc="Training"):
+        # Reset environment
+        state = env.reset()
+        episode_reward = 0.0
+        episode_length = 0
+        losses = []
+
+        # Episode loop
+        done = False
+        while not done:
+            # Select and execute action
+            action = agent.select_action(state, training=True)
+            next_state, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
+
+            # Store transition
+            agent.store_transition(state, action, reward, next_state, done)
+
+            # Train agent
+            loss = agent.train_step()
+            if loss is not None:
+                losses.append(loss)
+
+            # Update state and stats
+            state = next_state
+            episode_reward += reward
+            episode_length += 1
+
+        # Decay epsilon after episode
+        agent.decay_epsilon()
+
+        # Store episode stats
+        episode_rewards.append(episode_reward)
+        episode_lengths.append(episode_length)
+
+        # Log to TensorBoard
+        writer.add_scalar("train/episode_reward", episode_reward, episode)
+        writer.add_scalar("train/episode_length", episode_length, episode)
+        writer.add_scalar("train/epsilon", agent.epsilon, episode)
+        writer.add_scalar("train/checkpoints_passed", info['checkpoint'], episode)
+
+        if losses:
+            writer.add_scalar("train/loss", np.mean(losses), episode)
+
+        # Moving average reward
+        if len(episode_rewards) >= 100:
+            avg_reward_100 = np.mean(episode_rewards[-100:])
+            writer.add_scalar("train/avg_reward_100", avg_reward_100, episode)
+
+        # Print progress
+        if (episode + 1) % 10 == 0:
+            avg_reward = np.mean(episode_rewards[-10:])
+            avg_length = np.mean(episode_lengths[-10:])
+            print(f"\nEpisode {episode + 1}/{num_episodes}")
+            print(f"  Avg Reward (10): {avg_reward:.2f}")
+            print(f"  Avg Length (10): {avg_length:.1f}")
+            print(f"  Epsilon: {agent.epsilon:.3f}")
+            print(f"  Buffer Size: {len(agent.replay_buffer)}")
+
+        # Save checkpoint
+        if (episode + 1) % save_freq == 0:
+            checkpoint_path = f"{checkpoint_dir}/checkpoint_ep{episode+1}.pt"
+            agent.save(checkpoint_path)
+
+            # Save best model
+            if episode_reward > best_reward:
+                best_reward = episode_reward
+                best_path = f"{checkpoint_dir}/best_model.pt"
+                agent.save(best_path)
+                print(f"  🏆 New best reward: {best_reward:.2f}")
+
+        # Evaluate agent
+        if (episode + 1) % eval_freq == 0:
+            eval_reward, eval_length, eval_checkpoints = evaluate_agent(
+                env, agent, num_episodes=5
+            )
+            writer.add_scalar("eval/reward", eval_reward, episode)
+            writer.add_scalar("eval/length", eval_length, episode)
+            writer.add_scalar("eval/checkpoints", eval_checkpoints, episode)
+
+            print(f"  📊 Eval - Reward: {eval_reward:.2f}, Length: {eval_length:.1f}, Checkpoints: {eval_checkpoints:.1f}")
+
+    print("\n" + "=" * 60)
+    print("✅ TRAINING COMPLETE!")
+    print("=" * 60)
+    print(f"Best Reward: {best_reward:.2f}")
+    print(f"Final Epsilon: {agent.epsilon:.3f}")
+    print(f"Total Steps: {agent.steps}")
+    print("=" * 60 + "\n")
+
+
+def evaluate_agent(
+    env: CarEnvironment,
+    agent: DQNAgent,
+    num_episodes: int = 5,
+) -> tuple:
+    """
+    Evaluate agent performance (no exploration).
+
+    Args:
+        env: Environment
+        agent: Agent to evaluate
+        num_episodes: Number of evaluation episodes
+
+    Returns:
+        (avg_reward, avg_length, avg_checkpoints)
+    """
+    rewards = []
+    lengths = []
+    checkpoints = []
+
+    for _ in range(num_episodes):
+        state = env.reset()
+        episode_reward = 0.0
+        episode_length = 0
+        done = False
+
+        while not done:
+            # Greedy action (no exploration)
+            action = agent.select_action(state, training=False)
+            next_state, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
+
+            state = next_state
+            episode_reward += reward
+            episode_length += 1
+
+        rewards.append(episode_reward)
+        lengths.append(episode_length)
+        checkpoints.append(info['checkpoint'])
+
+    return np.mean(rewards), np.mean(lengths), np.mean(checkpoints)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Train DQN agent")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config/dqn_config.yaml",
+        help="Path to config file",
+    )
+    parser.add_argument(
+        "--track",
+        type=str,
+        default="tracks/oval_easy.json",
+        help="Path to track file",
+    )
+    parser.add_argument(
+        "--episodes",
+        type=int,
+        default=None,
+        help="Number of episodes (overrides config)",
+    )
+    parser.add_argument(
+        "--render",
+        action="store_true",
+        help="Enable rendering (slower training)",
+    )
+    args = parser.parse_args()
+
+    # Load config
+    config = load_config(args.config)
+
+    # Create environment
+    render_mode = "human" if args.render else None
+    env = CarEnvironment(
+        track_path=args.track,
+        render_mode=render_mode,
+        max_steps=config['training']['max_steps_per_episode'],
+    )
+
+    # Create agent
+    agent = DQNAgent(
+        state_dim=config['network']['state_dim'],
+        action_dim=config['network']['action_dim'],
+        hidden_dims=config['network']['hidden_dims'],
+        learning_rate=config['training']['learning_rate'],
+        gamma=config['training']['gamma'],
+        epsilon_start=config['exploration']['epsilon_start'],
+        epsilon_end=config['exploration']['epsilon_end'],
+        epsilon_decay=config['exploration']['epsilon_decay'],
+        buffer_capacity=config['replay']['buffer_size'],
+        batch_size=config['training']['batch_size'],
+        target_update_freq=config['target_network']['update_freq'],
+        device=config['training'].get('device'),
+        double_dqn=config['training'].get('double_dqn', False),
+    )
+
+    # TensorBoard writer
+    log_dir = config['logging']['tensorboard_dir']
+    writer = SummaryWriter(log_dir)
+
+    # Number of episodes
+    num_episodes = args.episodes or config['training']['num_episodes']
+
+    # Train
+    train(
+        env=env,
+        agent=agent,
+        num_episodes=num_episodes,
+        writer=writer,
+        save_freq=config['checkpoint']['save_freq'],
+        eval_freq=config['evaluation']['eval_freq'],
+        checkpoint_dir=config['checkpoint']['save_dir'],
+    )
+
+    # Cleanup
+    writer.close()
+    env.close()
+
+
+if __name__ == "__main__":
+    main()
