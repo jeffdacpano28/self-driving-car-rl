@@ -49,6 +49,12 @@ def main():
         help="Number of episodes (overrides config)",
     )
     parser.add_argument(
+        "--fps",
+        type=int,
+        default=None,
+        help="Target FPS for visualization (overrides config)",
+    )
+    parser.add_argument(
         "--no-viz",
         action="store_true",
         help="Disable visualization (headless mode)",
@@ -66,6 +72,7 @@ def main():
     # Override config with command-line args
     track_path = args.track if args.track else config['general']['track']
     num_episodes = args.episodes if args.episodes else config['general']['num_episodes']
+    fps = args.fps if args.fps else config['general']['fps']
     enable_viz = not args.no_viz and config['visualization']['enabled']
 
     # Set multiprocessing start method for Mac compatibility
@@ -79,6 +86,7 @@ def main():
     print(f"Agent 2: {config['agent2']['name']} ({config['agent2']['type']})")
     print(f"Track: {track_path}")
     print(f"Episodes: {num_episodes}")
+    print(f"FPS: {fps}")
     print(f"Visualization: {'Enabled' if enable_viz else 'Disabled (Headless)'}")
     print("=" * 70 + "\n")
 
@@ -117,7 +125,7 @@ def main():
             agent2_name=config['agent2']['name'],
             total_width=config['visualization']['window_width'],
             total_height=config['visualization']['window_height'],
-            fps=config['general']['fps'],
+            fps=fps,
         )
         print(f"🎨 Visualization enabled: {config['visualization']['window_width']}x{config['visualization']['window_height']}")
 
