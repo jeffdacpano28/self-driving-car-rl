@@ -90,8 +90,8 @@ sudo apt-get install python3-dev libsdl2-dev libsdl2-image-dev \
 
 ```bash
 # Clone repository
-git clone https://github.com/Ikrar06/ai-racing-trainer.git
-cd ai-racing-trainer
+git clone https://github.com/Ikrar06/self-driving-car-rl.git
+cd self-driving-car-rl
 
 # Create virtual environment
 python3 -m venv venv
@@ -158,7 +158,7 @@ python3 train_comparison.py
 ## Project Structure
 
 ```
-ai-racing-trainer/
+self-driving-car-rl/
 ├── src/
 │   ├── environment/
 │   │   ├── car.py              # Smooth steering physics
@@ -402,7 +402,7 @@ Use conventional commits: `feat:`, `fix:`, `perf:`, `docs:`, `chore:`
 
 ## Contact
 
-**Project Link:** https://github.com/Ikrar06/ai-racing-trainer
+**Project Link:** https://github.com/Ikrar06/self-driving-car-rl
 
 ---
 
