@@ -5,6 +5,8 @@ Provides a Gym-like interface for reinforcement learning.
 
 from typing import Dict, Tuple, Optional, Any
 import numpy as np
+from pathlib import Path
+import time
 
 try:
     import pygame
@@ -15,6 +17,14 @@ except ImportError:
 from .car import Car
 from .track import Track
 from .sensor import create_default_sensors, SensorArray
+from utils.config_loader import (
+    load_environment_config,
+    get_car_params_from_config,
+    get_sensor_params_from_config,
+    get_reward_params_from_config,
+    get_finish_time_params_from_config,
+    get_episode_params_from_config,
+)
 
 
 class CarEnvironment:
@@ -40,38 +50,77 @@ class CarEnvironment:
         self,
         track_path: str,
         render_mode: Optional[str] = None,
-        max_steps: int = 1000,
-        sensor_range: float = 200.0,
-        reward_checkpoint: float = 100.0,
-        reward_survival: float = 1.0,
-        reward_crash: float = -100.0,
-        car_width: float = 30.0,
-        car_height: float = 50.0,
-        car_max_velocity: float = 10.0,
-        car_min_velocity: float = -3.0,
-        car_acceleration: float = 0.5,
-        car_friction: float = 0.98,
-        car_turn_rate: float = 0.1,
+        config_path: Optional[str] = None,
+        # Override parameters (if None, uses config)
+        max_steps: Optional[int] = None,
+        sensor_range: Optional[float] = None,
+        num_sensors: Optional[int] = None,
+        sensor_angles: Optional[list] = None,
+        reward_checkpoint: Optional[float] = None,
+        reward_survival: Optional[float] = None,
+        reward_crash: Optional[float] = None,
+        car_width: Optional[float] = None,
+        car_height: Optional[float] = None,
+        car_max_velocity: Optional[float] = None,
+        car_min_velocity: Optional[float] = None,
+        car_acceleration: Optional[float] = None,
+        car_friction: Optional[float] = None,
+        car_turn_rate: Optional[float] = None,
     ):
         """
         Initialize the environment.
 
+        All parameters are optional and will be loaded from config/environment.yaml by default.
+        You can override specific parameters by passing them explicitly.
+
         Args:
             track_path: Path to track JSON file
             render_mode: "human" for pygame visualization, None for no rendering
-            max_steps: Maximum steps per episode
-            sensor_range: Maximum sensor detection range
-            reward_checkpoint: Reward for passing checkpoint
-            reward_survival: Reward per step survived
-            reward_crash: Penalty for crashing
-            car_width: Car width in pixels
-            car_height: Car height in pixels
-            car_max_velocity: Maximum forward speed
-            car_min_velocity: Maximum reverse speed
-            car_acceleration: Acceleration rate
-            car_friction: Velocity decay factor
-            car_turn_rate: Steering angle change rate
+            config_path: Path to environment config YAML (default: config/environment.yaml)
+            max_steps: Maximum steps per episode (overrides config)
+            sensor_range: Maximum sensor detection range (overrides config)
+            num_sensors: Number of sensors (overrides config)
+            sensor_angles: Sensor angles in degrees (overrides config)
+            reward_checkpoint: Reward for passing checkpoint (overrides config)
+            reward_survival: Reward per step survived (overrides config)
+            reward_crash: Penalty for crashing (overrides config)
+            car_width: Car width in pixels (overrides config)
+            car_height: Car height in pixels (overrides config)
+            car_max_velocity: Maximum forward speed (overrides config)
+            car_min_velocity: Maximum reverse speed (overrides config)
+            car_acceleration: Acceleration rate (overrides config)
+            car_friction: Velocity decay factor (overrides config)
+            car_turn_rate: Steering angle change rate (overrides config)
         """
+        # Load configuration
+        env_config = load_environment_config(config_path)
+
+        # Extract parameters from config
+        car_params = get_car_params_from_config(env_config)
+        sensor_params = get_sensor_params_from_config(env_config)
+        reward_params = get_reward_params_from_config(env_config)
+        finish_time_params = get_finish_time_params_from_config(env_config)
+        episode_params = get_episode_params_from_config(env_config)
+
+        # Use config values, but allow overrides
+        final_car_width = car_width if car_width is not None else car_params['car_width']
+        final_car_height = car_height if car_height is not None else car_params['car_height']
+        final_car_max_velocity = car_max_velocity if car_max_velocity is not None else car_params['car_max_velocity']
+        final_car_min_velocity = car_min_velocity if car_min_velocity is not None else car_params['car_min_velocity']
+        final_car_acceleration = car_acceleration if car_acceleration is not None else car_params['car_acceleration']
+        final_car_friction = car_friction if car_friction is not None else car_params['car_friction']
+        final_car_turn_rate = car_turn_rate if car_turn_rate is not None else car_params['car_turn_rate']
+
+        final_num_sensors = num_sensors if num_sensors is not None else sensor_params['num_sensors']
+        final_sensor_angles = sensor_angles if sensor_angles is not None else sensor_params['angles']
+        final_sensor_range = sensor_range if sensor_range is not None else sensor_params['max_range']
+
+        final_reward_survival = reward_survival if reward_survival is not None else reward_params['reward_survival']
+        final_reward_checkpoint = reward_checkpoint if reward_checkpoint is not None else reward_params['reward_checkpoint']
+        final_reward_crash = reward_crash if reward_crash is not None else reward_params['reward_crash']
+
+        final_max_steps = max_steps if max_steps is not None else episode_params['max_steps']
+
         # Load track
         self.track = Track.load(track_path)
 
@@ -80,27 +129,46 @@ class CarEnvironment:
             x=self.track.start_pos[0],
             y=self.track.start_pos[1],
             angle=self.track.start_angle,
-            width=car_width,
-            height=car_height,
-            max_velocity=car_max_velocity,
-            min_velocity=car_min_velocity,
-            acceleration=car_acceleration,
-            friction=car_friction,
-            turn_rate=car_turn_rate,
+            width=final_car_width,
+            height=final_car_height,
+            max_velocity=final_car_max_velocity,
+            min_velocity=final_car_min_velocity,
+            acceleration=final_car_acceleration,
+            friction=final_car_friction,
+            turn_rate=final_car_turn_rate,
         )
 
         # Attach sensors
-        self.sensors = create_default_sensors(max_range=sensor_range)
+        self.sensors = create_default_sensors(
+            num_sensors=final_num_sensors,
+            angles=final_sensor_angles,
+            max_range=final_sensor_range
+        )
         self.car.attach_sensors(self.sensors)
 
+        # Store sensor count for observation space
+        self.num_sensors = final_num_sensors
+
         # Environment settings
-        self.max_steps = max_steps
+        self.max_steps = final_max_steps
         self.render_mode = render_mode
 
         # Reward parameters
-        self.reward_checkpoint = reward_checkpoint
-        self.reward_survival = reward_survival
-        self.reward_crash = reward_crash
+        self.reward_checkpoint = final_reward_checkpoint
+        self.reward_survival = final_reward_survival
+        self.reward_crash = final_reward_crash
+        self.reward_finish = reward_params['reward_finish']
+
+        # Finish time bonus parameters
+        self.finish_time_enabled = finish_time_params['finish_time_enabled']
+        self.finish_time_mode = finish_time_params['finish_time_mode']
+        # Speed-based mode
+        self.finish_time_max_time = finish_time_params['finish_time_max_time']
+        self.finish_time_speed_multiplier = finish_time_params['finish_time_speed_multiplier']
+        # Target-based mode
+        self.finish_time_target = finish_time_params['finish_time_target']
+        self.finish_time_bonus_multiplier = finish_time_params['finish_time_bonus_multiplier']
+        self.finish_time_penalty_multiplier = finish_time_params['finish_time_penalty_multiplier']
 
         # Episode state
         self.current_step = 0
@@ -128,7 +196,10 @@ class CarEnvironment:
             return
 
         pygame.init()
-        self.screen = pygame.display.set_mode((self.window_width, self.window_height))
+        self.screen = pygame.display.set_mode(
+            (self.window_width, self.window_height),
+            pygame.RESIZABLE
+        )
         pygame.display.set_caption("Self-Driving Car Simulation")
         self.clock = pygame.time.Clock()
 
@@ -162,6 +233,8 @@ class CarEnvironment:
         self.total_reward = 0.0
         self.prev_pos = (self.car.x, self.car.y)
         self.position_trail = []
+        self.start_time = time.time()  # Track episode start time for finish time calculation
+        self.finish_time = None  # Will be set when finish line is crossed
 
         # Get initial observation
         observation = self.car.get_observation(self.track)
@@ -295,8 +368,11 @@ class CarEnvironment:
                 )
                 reward += 0.1 * distance
 
-            # 5. Check checkpoint crossing (big bonus)
+            # 5. Check checkpoint crossing (big bonus or penalty)
             checkpoint_passed = False
+            wrong_checkpoint_crossed = False
+
+            # Check if correct checkpoint was crossed
             if self.track.check_checkpoint(
                 self.prev_pos, curr_pos, self.current_checkpoint
             ):
@@ -308,8 +384,42 @@ class CarEnvironment:
 
                 # FINISH LINE! If completed all checkpoints (back to 0), WIN!
                 if self.current_checkpoint == 0 and checkpoint_passed:
-                    reward += 1000.0  # HUGE REWARD for finishing!
+                    # Calculate finish time
+                    self.finish_time = time.time() - self.start_time
+
+                    # Base reward for finishing
+                    reward += self.reward_finish
+
+                    # TIME BONUS: Apply time-based reward if enabled
+                    if self.finish_time_enabled:
+                        if self.finish_time_mode == "speed_based":
+                            # SPEED-BASED: Semakin cepat = semakin banyak reward
+                            # Formula: (max_time - actual_time) × multiplier
+                            time_saved = max(0, self.finish_time_max_time - self.finish_time)
+                            time_bonus = time_saved * self.finish_time_speed_multiplier
+                            reward += time_bonus
+                        else:  # target_based
+                            # TARGET-BASED: Ada target ideal, ada bonus dan penalty
+                            if self.finish_time < self.finish_time_target:
+                                # Finished fast! Give big bonus
+                                time_bonus = (self.finish_time_target - self.finish_time) * self.finish_time_bonus_multiplier
+                                reward += time_bonus
+                            else:
+                                # Too slow, small penalty
+                                time_penalty = (self.finish_time - self.finish_time_target) * self.finish_time_penalty_multiplier
+                                reward -= time_penalty
+
                     terminated = True  # Episode ends successfully
+
+            else:
+                # Check if ANY wrong checkpoint was crossed (prevents backward/shortcut)
+                for i in range(len(self.track.checkpoints)):
+                    if i != self.current_checkpoint:
+                        if self.track.check_checkpoint(self.prev_pos, curr_pos, i):
+                            # HEAVY PENALTY for crossing wrong checkpoint
+                            reward -= 1000.0  # Keras penalty untuk mencegah balik arah
+                            wrong_checkpoint_crossed = True
+                            break
 
         # Check if max steps reached
         if self.current_step >= self.max_steps:
@@ -332,6 +442,7 @@ class CarEnvironment:
             "total_reward": self.total_reward,
             "crashed": not on_track,
             "finished": passed_all,  # NEW: Did agent finish the lap?
+            "finish_time": self.finish_time,  # Time to complete lap (None if not finished)
             "position": (self.car.x, self.car.y),
             "velocity": self.car.velocity,
             "angle": self.car.angle,
@@ -439,7 +550,7 @@ class CarEnvironment:
 
     def get_observation_space_size(self) -> int:
         """Get size of observation vector."""
-        return 8  # 7 sensors + 1 velocity
+        return self.num_sensors + 1  # N sensors + 1 velocity
 
     def __repr__(self) -> str:
         return (
