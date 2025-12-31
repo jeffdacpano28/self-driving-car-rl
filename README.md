@@ -143,7 +143,22 @@ python3 train_ppo.py --track tracks/oval_easy.json --episodes 1000
 # Side-by-side comparison with split-screen (2000×700)
 python3 train_comparison.py
 
-# Configure in config/comparison_config.yaml
+# Custom track and episodes
+python3 train_comparison.py --track tracks/oval_easy.json --episodes 300
+
+# Adjust FPS for performance
+python3 train_comparison.py --fps 30
+
+# Combine all options
+python3 train_comparison.py --track tracks/megacool_track.json --episodes 500 --fps 60
+
+# Headless mode (no visualization)
+python3 train_comparison.py --no-viz
+
+# Start in fullscreen
+python3 train_comparison.py --fullscreen
+
+# All options can be configured in config/comparison_config.yaml
 ```
 
 **Comparison Training Controls:**
@@ -347,8 +362,10 @@ pytest tests/ -v
 
 ### Compare Algorithms
 ```bash
-# Edit config/comparison_config.yaml
-python3 train_comparison.py --episodes 300
+# Use command-line options (overrides config file)
+python3 train_comparison.py --track tracks/oval_easy.json --episodes 300 --fps 60
+
+# Or edit config/comparison_config.yaml for defaults
 ```
 
 ## Performance Tips
