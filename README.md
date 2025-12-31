@@ -1,59 +1,74 @@
 # AI Racing Trainer - Deep Reinforcement Learning Racing Simulator
 
-> Train autonomous racing cars using Deep Q-Network (DQN) with custom physics engine and interactive track builder
+> Train autonomous racing cars using DQN & PPO with custom physics engine, side-by-side comparison training, and interactive track builder
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 [![Pygame](https://img.shields.io/badge/Pygame-2.5+-green.svg)](https://www.pygame.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Overview
 
 A complete reinforcement learning racing simulator featuring:
-- **Custom Physics Engine** - Realistic car dynamics with acceleration, friction, and steering
-- **7-Sensor Ray-Casting System** - Wide-angle coverage for obstacle detection
-- **Interactive Track Builder** - Visual tool with zoom, pan, and fullscreen support
-- **DQN Implementation** - Deep Q-Network with experience replay and target network
-- **Real-time Training Visualization** - Camera controls, ghost cars, and live metrics
-- **F1-Style Circuits** - Multiple challenging tracks with checkpoints
+- **Dual RL Algorithms** - DQN and PPO with side-by-side comparison training
+- **Realistic Physics** - Smooth steering with angular damping, 9-action discrete control
+- **7-Sensor Ray-Casting** - Color-coded distance gradient (green=far, red=close)
+- **Interactive Track Builder** - Visual editor with smoothing, file dialog, and optimization
+- **Split-Screen Training** - Compare DQN vs PPO performance in real-time
+- **Performance Optimized** - Triple-level caching for lag-free training with complex tracks
+- **Finish Time Tracking** - Speed-based rewards for faster lap completion
 
 ## Features
 
-### Car Physics
-- Realistic acceleration and friction
-- Configurable max/min velocity
-- Smooth steering mechanics
-- Collision detection
+### Dual RL Algorithms
+- **DQN (Deep Q-Network)** - Off-policy value-based learning
+  - Experience replay with 20k buffer
+  - Double DQN for stable Q-values
+  - Epsilon-greedy exploration (1.0 → 0.1)
+- **PPO (Proximal Policy Optimization)** - On-policy actor-critic
+  - GAE (λ=0.95) for advantage estimation
+  - Clipped surrogate loss (ε=0.2)
+  - Entropy bonus for exploration
+- **Side-by-Side Comparison** - Train both agents simultaneously with split-screen visualization
 
-### Advanced Sensors
+### Advanced Car Physics
+- **Smooth Steering** - Angular velocity with damping (not instant snapping)
+- **9 Discrete Actions** - 3 steering directions × 3 speed levels
+  - LEFT/STRAIGHT/RIGHT × SLOW/NORMAL/FAST
+  - Agent learns speed control, steering, and braking
+- **Realistic Dynamics** - Acceleration, friction, angular damping
+- **Finish Time Rewards** - Bonus for faster lap completion
+
+### Enhanced Sensors
 - **7 ray-cast sensors** at -90°, -60°, -30°, 0°, +30°, +60°, +90°
-- Color-coded distance visualization (green → yellow → red)
+- **6-level color gradient** - Green (safe) → Yellow → Orange → Red (danger)
+- **Dynamic line width** - Thicker lines when closer to walls
 - Normalized readings for neural network input
-- Configurable range and angles
 
-### Track Builder
+### Track Builder Pro
 - **Interactive visual editor** with mouse controls
-- **Camera system** with zoom (0.2x-5.0x) and pan
-- **Car size reference** (20x15px) overlay at cursor
-- **Grid snapping** for precise placement
-- **Fullscreen mode** (Cmd+F or F11)
-- Save/load tracks in JSON format
-- Real-time boundary preview
-
-### DQN Agent
-- Deep Q-Network with configurable architecture
-- Experience replay buffer (100k transitions)
-- Target network for stable learning
-- Double DQN support
-- Epsilon-greedy exploration (0.3 → 0.05)
-- PyTorch with MPS (Metal) acceleration on Mac
+- **Chaikin's smoothing algorithm** - Round sharp corners (press M)
+- **File dialog picker** - GUI for loading tracks (with fallback)
+- **Camera system** - Zoom (0.2x-5.0x), pan, fullscreen
+- **Car size reference** - 30×15px overlay at cursor
+- **Grid snapping** - Precise placement
+- **Performance optimized** - Handles 40k+ point tracks without lag
 
 ### Training Features
-- Real-time visualization with camera follow
-- Ghost car showing previous episode path
-- Episode statistics (steps, reward, checkpoints)
-- Model checkpointing (best + periodic)
-- Configurable reward system
+- **Split-screen comparison** - DQN vs PPO side-by-side (2000×700)
+- **Real-time visualization** - Camera follow with independent controls
+- **Finish time tracking** - Speed-based or target-based rewards
+- **Episode statistics** - Steps, rewards, checkpoints, lap times
+- **Model checkpointing** - Best + periodic saves
+- **Fullscreen support** - Mac-optimized with resize handling
+
+### Performance Optimization
+- **Triple-level track caching**:
+  - Rendering: ~500 points (display)
+  - Collision: ~1500 points (physics)
+  - Original: Full detail preserved
+- **Fast decimation** - O(n) uniform sampling for 5k+ points
+- **Douglas-Peucker** - Iterative shape preservation for <5k points
+- **Result**: Lag-free training even with 39k+ point tracks!
 
 ## Quick Start
 
@@ -75,7 +90,7 @@ sudo apt-get install python3-dev libsdl2-dev libsdl2-image-dev \
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/ai-racing-trainer.git
+git clone https://github.com/Ikrar06/ai-racing-trainer.git
 cd ai-racing-trainer
 
 # Create virtual environment
@@ -97,6 +112,7 @@ python3 track_builder.py
 
 **Track Builder Controls:**
 - **[1-4]** - Switch mode (Outer/Inner/Checkpoint/Start)
+- **[M]** - Smooth selected boundary (Chaikin's algorithm)
 - **[Mouse Wheel]** - Zoom in/out
 - **[W/A/S/D]** or **[Arrow Keys]** - Pan camera
 - **[Click]** - Place points
@@ -104,29 +120,39 @@ python3 track_builder.py
 - **[Z]** - Undo last point
 - **[R]** - Rotate start angle
 - **[Cmd+S]** - Save track
-- **[Cmd+L]** - Load track
+- **[Cmd+L]** - Load track (GUI dialog)
 - **[Cmd+F]** or **[F11]** - Toggle fullscreen
 - **[V]** - Toggle car reference
 - **[G]** - Toggle grid snap
 
-#### Train Agent
+#### Train Single Agent
 
+**DQN:**
 ```bash
-# Train on default track
-python3 train_with_camera.py
-
-# Train on custom track
-python3 train_with_camera.py --track tracks/f1_professional_circuit.json
-
-# Adjust training parameters
-python3 train_with_camera.py --episodes 500 --fps 60
+python3 train_with_camera.py --track tracks/oval_easy.json --episodes 1000
 ```
 
-**Training Controls:**
-- **[Space]** or **[F]** - Toggle camera follow
-- **[Mouse Wheel]** - Zoom
-- **[Arrow Keys]** - Pan camera
-- **[R]** - Reset camera
+**PPO:**
+```bash
+python3 train_ppo.py --track tracks/oval_easy.json --episodes 1000
+```
+
+#### Compare DQN vs PPO
+
+```bash
+# Side-by-side comparison with split-screen (2000×700)
+python3 train_comparison.py
+
+# Configure in config/comparison_config.yaml
+```
+
+**Comparison Training Controls:**
+- **[Tab]** - Switch active camera
+- **[1/2]** - Focus left/right agent
+- **[Space]** - Toggle camera follow
+- **[Arrow Keys]** - Pan active camera
+- **[Mouse Wheel]** - Zoom active camera
+- **[F11]** - Toggle fullscreen
 - **[ESC]** - Exit training
 
 ## Project Structure
@@ -135,25 +161,43 @@ python3 train_with_camera.py --episodes 500 --fps 60
 ai-racing-trainer/
 ├── src/
 │   ├── environment/
-│   │   ├── car.py              # Car physics & dynamics
-│   │   ├── track.py            # Track loading & collision
-│   │   ├── sensor.py           # 7-sensor ray-casting
-│   │   └── simulation.py       # Main RL environment
-│   └── algorithms/
-│       └── dqn/
-│           ├── agent.py        # DQN agent
-│           ├── network.py      # Q-Network
-│           └── replay_buffer.py # Experience replay
+│   │   ├── car.py              # Smooth steering physics
+│   │   ├── track.py            # Triple-level caching
+│   │   ├── sensor.py           # 6-level color gradient
+│   │   └── simulation.py       # RL env + finish time tracking
+│   ├── algorithms/
+│   │   ├── dqn/
+│   │   │   ├── agent.py        # DQN with Double DQN
+│   │   │   ├── network.py      # Q-Network [128, 128]
+│   │   │   └── replay_buffer.py
+│   │   └── ppo/
+│   │       ├── agent.py        # PPO discrete actions
+│   │       ├── network.py      # Actor-Critic [128, 128]
+│   │       └── trajectory_buffer.py  # GAE computation
+│   ├── comparison/
+│   │   ├── coordinator.py      # Multi-process training
+│   │   ├── worker.py           # Training workers
+│   │   └── shared_state.py     # IPC for rendering
+│   ├── visualization/
+│   │   ├── dual_screen_renderer.py  # Split-screen
+│   │   ├── camera.py           # Independent cameras
+│   │   └── ui_components.py    # Reusable UI
+│   └── utils/
+│       └── config_loader.py    # Centralized config
 ├── config/
-│   ├── environment.yaml        # Car physics, sensors, rewards
-│   └── dqn_config.yaml        # Network architecture, training
+│   ├── environment.yaml        # Physics, sensors, rewards
+│   ├── dqn_config.yaml        # DQN hyperparameters
+│   ├── ppo_config.yaml        # PPO hyperparameters
+│   └── comparison_config.yaml  # Comparison settings
 ├── tracks/
-│   ├── f1_professional_circuit.json
-│   ├── f1_spa_style_long.json
+│   ├── oval_easy.json
+│   ├── megacool_track.json
 │   └── *.json                 # Your custom tracks
 ├── track_builder.py           # Interactive track editor
-├── train_with_camera.py       # Training with visualization
-└── requirements.txt           # Python dependencies
+├── train_with_camera.py       # DQN training + visualization
+├── train_ppo.py               # PPO standalone training
+├── train_comparison.py        # Side-by-side DQN vs PPO
+└── requirements.txt
 ```
 
 ## Configuration
@@ -162,43 +206,78 @@ ai-racing-trainer/
 
 ```yaml
 car:
-  width: 5
-  height: 2
-  max_velocity: 8.0
-  min_velocity: 2.0
-  acceleration: 0.3
-  friction: 0.05
-  turn_rate: 0.12
+  width: 30
+  height: 15
+  max_velocity: 40.0
+  min_velocity: -1.0
+  acceleration: 0.25
+  friction: 0.95
+  turn_rate: 0.08
+  angular_damping: 0.85  # Smooth steering
 
 sensors:
   num_sensors: 7
   angles: [-90, -60, -30, 0, 30, 60, 90]
-  max_range: 200
+  max_range: 350
+
+actions:
+  type: "discrete"
+  num_actions: 9  # 3 steering × 3 speed
 
 rewards:
-  checkpoint: 100
-  survival: 0.1
-  crash: -50
+  survival: 2.0
+  checkpoint: 500.0
+  crash: -2000.0
+  finish: 1000.0
+
+finish_time:
+  enabled: true
+  mode: "speed_based"  # or "target_based"
+  max_time: 60.0
+  speed_multiplier: 50.0
 ```
 
 ### DQN Hyperparameters (`config/dqn_config.yaml`)
 
 ```yaml
 network:
-  state_dim: 8        # 7 sensors + 1 velocity
-  action_dim: 3       # LEFT, STRAIGHT, RIGHT
   hidden_dims: [128, 128]
 
 training:
-  learning_rate: 0.0003
+  num_episodes: 1000
+  learning_rate: 0.0005
   gamma: 0.99
-  epsilon_start: 0.3
-  epsilon_end: 0.05
-  epsilon_decay: 0.995
-  batch_size: 64
+  double_dqn: true
+
+exploration:
+  epsilon_start: 1.0
+  epsilon_end: 0.1
+  epsilon_decay: 0.9985
 
 replay:
-  buffer_size: 100000
+  buffer_size: 20000
+  batch_size: 64
+```
+
+### PPO Hyperparameters (`config/ppo_config.yaml`)
+
+```yaml
+network:
+  hidden_dims: [128, 128]
+  continuous_actions: false
+
+training:
+  num_episodes: 1000
+  learning_rate: 0.0003
+  gamma: 0.99
+  trajectory_length: 2048
+  update_epochs: 10
+
+ppo:
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.01
 ```
 
 ## State & Action Space
@@ -217,29 +296,36 @@ replay:
 ]
 ```
 
-### Actions (Discrete)
-- **0**: Turn LEFT
-- **1**: Go STRAIGHT
-- **2**: Turn RIGHT
+### Actions (9 Discrete Actions)
+- **0**: LEFT_SLOW - Turn left + slow speed
+- **1**: LEFT_NORMAL - Turn left + normal speed
+- **2**: LEFT_FAST - Turn left + fast speed
+- **3**: STRAIGHT_SLOW - Straight + slow speed
+- **4**: STRAIGHT_NORMAL - Straight + normal speed
+- **5**: STRAIGHT_FAST - Straight + fast speed
+- **6**: RIGHT_SLOW - Turn right + slow speed
+- **7**: RIGHT_NORMAL - Turn right + normal speed
+- **8**: RIGHT_FAST - Turn right + fast speed
 
 ## Tech Stack
 
 | Category | Technology |
 |----------|-----------|
 | **Language** | Python 3.8+ |
-| **Deep Learning** | PyTorch 2.0+ (with MPS support) |
+| **Deep Learning** | PyTorch 2.0+ (MPS support) |
 | **Visualization** | Pygame 2.5+ |
 | **Math** | NumPy |
 | **Config** | PyYAML |
+| **Multiprocessing** | Python multiprocessing |
 
 ## Training Results
 
 Trained agents achieve:
-- Successful lap completion on oval tracks
-- Checkpoint collection rate: 80%+
-- Collision avoidance in tight corners
-- Smooth steering behavior
-- F1-style circuit mastery (in progress)
+- **Lap completion**: 80-90% on complex tracks
+- **Checkpoint rate**: 90%+ collection
+- **Collision avoidance**: Smooth cornering
+- **Speed optimization**: Learns when to slow/fast
+- **Finish time**: Progressive improvement with time-based rewards
 
 ## Development
 
@@ -248,24 +334,34 @@ Trained agents achieve:
 pytest tests/ -v
 ```
 
-### Create New Track
-1. Launch track builder: `python3 track_builder.py`
-2. Press **[1]** for Outer Boundary mode
-3. Click to place outer wall points
-4. Press **[C]** to close boundary
-5. Press **[2]** for Inner Boundary mode
-6. Repeat for inner wall
-7. Press **[3]** for Checkpoint mode
-8. Click start and end for each checkpoint
-9. Press **[4]** for Start Position
-10. Click starting position
-11. Press **[Cmd+S]** to save
+### Create Smooth Track
+1. Launch: `python3 track_builder.py`
+2. Draw outer boundary (press [1])
+3. Close boundary (press [C])
+4. **Smooth it** (press [M] multiple times)
+5. Draw inner boundary (press [2])
+6. **Smooth it** (press [M])
+7. Add checkpoints (press [3])
+8. Set start position (press [4])
+9. Save (press [Cmd+S])
 
-### Adjust Car Physics
-Edit `config/environment.yaml`:
-- Increase `max_velocity` for faster racing
-- Increase `turn_rate` for sharper turns
-- Adjust `friction` for drift behavior
+### Compare Algorithms
+```bash
+# Edit config/comparison_config.yaml
+python3 train_comparison.py --episodes 300
+```
+
+## Performance Tips
+
+### For Smooth Tracks (5k-40k points)
+- Track builder automatically optimizes on save
+- Triple-level caching handles rendering + collision
+- No manual point reduction needed!
+
+### For Faster Training
+- Use `--fps 30` for lower CPU usage
+- Disable visualization: `train_ppo.py --no-render`
+- Increase `batch_size` for GPU utilization
 
 ## Troubleshooting
 
@@ -281,28 +377,17 @@ sudo apt-get install libsdl2-dev
 **PyTorch MPS not working:**
 ```python
 import torch
-print(torch.backends.mps.is_available())  # Should be True on Apple Silicon
+print(torch.backends.mps.is_available())  # Should be True
 ```
 
-**ModuleNotFoundError:**
-```bash
-# Ensure venv is activated
-source venv/bin/activate
-which python  # Should show ./venv/bin/python
-```
+**Track builder file dialog not showing:**
+- Install tkinter: `brew install python-tk`
+- Or use fallback text menu
 
-## Roadmap
-
-- [x] Custom physics engine
-- [x] 7-sensor ray-casting
-- [x] DQN implementation
-- [x] Interactive track builder
-- [x] Camera controls & visualization
-- [ ] PPO algorithm
-- [ ] NEAT (genetic algorithm)
-- [ ] Multi-agent racing
-- [ ] Curriculum learning
-
+**Lag with many track points:**
+- Track caching is automatic
+- For 40k+ points: Rendering uses ~500, collision uses ~1500
+- Original full detail preserved
 
 ## Contributing
 
@@ -313,10 +398,12 @@ Contributions welcome! Please:
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open Pull Request
 
+Use conventional commits: `feat:`, `fix:`, `perf:`, `docs:`, `chore:`
+
 ## Contact
 
-**Project Link:** https://github.com/yourusername/ai-racing-trainer
+**Project Link:** https://github.com/Ikrar06/ai-racing-trainer
 
 ---
 
-Star this repo if you find it useful!
+⭐ Star this repo if you find it useful!
