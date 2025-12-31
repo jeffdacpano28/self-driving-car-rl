@@ -1,0 +1,26 @@
+{
+  "name": "Simple Straight Track",
+  "outer_boundary": [
+    [50, 200],
+    [950, 200],
+    [950, 500],
+    [50, 500]
+  ],
+  "inner_boundary": [],
+  "checkpoints": [
+    {
+      "start": [300, 200],
+      "end": [300, 500]
+    },
+    {
+      "start": [500, 200],
+      "end": [500, 500]
+    },
+    {
+      "start": [700, 200],
+      "end": [700, 500]
+    }
+  ],
+  "start_pos": [150, 350],
+  "start_angle": 0.0
+}
