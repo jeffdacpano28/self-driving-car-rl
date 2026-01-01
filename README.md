@@ -170,6 +170,42 @@ python3 train_comparison.py --fullscreen
 - **[F11]** - Toggle fullscreen
 - **[ESC]** - Exit training
 
+#### Evaluate Trained Models
+
+```bash
+# Test a trained model with visualization
+python3 evaluate_model.py --model models/checkpoints/dqn_best.pt --track tracks/oval_easy.json --episodes 10
+
+# Test on different track (generalization test)
+python3 evaluate_model.py --model models/checkpoints/ppo_best.pt --track tracks/megacool_track.json --episodes 20
+
+# Headless evaluation (no visualization, faster)
+python3 evaluate_model.py --model models/checkpoints/dqn_best.pt --track tracks/oval_easy.json --episodes 100 --no-render
+
+# Export results to CSV and JSON
+python3 evaluate_model.py --model models/checkpoints/ppo_best.pt --track tracks/oval_easy.json --episodes 50 --export
+
+# Specify agent type manually (if auto-detect fails)
+python3 evaluate_model.py --model path/to/model.pt --track tracks/oval_easy.json --agent-type DQN
+
+# Adjust FPS for smoother visualization
+python3 evaluate_model.py --model models/checkpoints/dqn_best.pt --track tracks/oval_easy.json --fps 30
+```
+
+**Evaluation Metrics:**
+- ✅ **Success Rate** - Percentage of completed laps
+- 📊 **Average Reward** - Mean episode reward
+- ⏱️ **Lap Time** - Average and best lap times
+- 🎯 **Checkpoint Rate** - Percentage of checkpoints collected
+- 📈 **Steps per Episode** - Efficiency metric
+
+**Camera Controls:**
+- **[Mouse Wheel]** - Zoom in/out (0.3x - 3.0x)
+- **[Arrow Keys]** - Pan camera
+- **[Space]** - Toggle follow car mode
+- **[R]** - Reset camera to default
+- **[ESC]** - Exit evaluation
+
 ## Project Structure
 
 ```
@@ -212,6 +248,7 @@ self-driving-car-rl/
 ├── train_with_camera.py       # DQN training + visualization
 ├── train_ppo.py               # PPO standalone training
 ├── train_comparison.py        # Side-by-side DQN vs PPO
+├── evaluate_model.py          # Model evaluation with metrics
 └── requirements.txt
 ```
 
