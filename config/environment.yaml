@@ -10,7 +10,7 @@ window:
 car:
   width: 30  # Smaller car for easier maneuvering
   height: 15  # Smaller car
-  max_velocity: 40.0  # Maximum speed (auto-adjusted based on turns/obstacles)
+  max_velocity: 50.0  # Maximum speed (auto-adjusted based on turns/obstacles)
   min_velocity: -1.0  # Slower reverse
   acceleration: 0.25  # Acceleration rate (auto speed control uses this)
   friction: 0.95  # Friction (auto speed control manages braking)
@@ -48,8 +48,8 @@ finish_time:
   # SPEED_BASED MODE (recommended): Semakin cepat = semakin banyak reward
   # Formula: reward = (max_time - actual_time) × multiplier
   # Example: max=60s, finish di 25s → bonus = (60-25)×50 = 1750
-  max_time: 60.0  # Maximum expected time (slowest acceptable finish)
-  speed_multiplier: 50.0  # Reward per second saved
+  max_time: 80.0  # Maximum expected time (slowest acceptable finish)
+  speed_multiplier: 30.0  # Reward per second saved
 
   # TARGET_BASED MODE: Ada target ideal, lebih cepat=bonus, lebih lambat=penalty
   # Formula: if time<target → +(target-time)×bonus_mult, else → -(time-target)×penalty_mult
